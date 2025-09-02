@@ -252,8 +252,7 @@
         class URLShortener {
             constructor() {
                 this.urls = this.loadFromStorage();
-                this.baseUrl = 'http://forwp';  // 커스텀 도메인으로 변경
-                this.realBaseUrl = window.location.origin + window.location.pathname;
+                this.baseUrl = window.location.origin;  // 깔끔한 루트 도메인
                 this.initEventListeners();
                 this.renderUrlList();
                 this.handleRedirect();
@@ -341,18 +340,9 @@
             showResult(shortCode) {
                 const result = document.getElementById('result');
                 const shortUrl = document.getElementById('shortUrl');
+                const fullShortUrl = `${this.baseUrl}/${shortCode}`;
                 
-                // 표시용과 실제 링크용을 분리
-                const displayUrl = `${this.baseUrl}/${shortCode}`;
-                const actualUrl = `${this.realBaseUrl}?s=${shortCode}`;
-                
-                // 표시는 커스텀 도메인으로, 실제 링크는 작동하는 주소로
-                shortUrl.innerHTML = `
-                    <span style="color: #667eea;">${displayUrl}</span>
-                    <br>
-                    <small style="color: #999; font-size: 12px;">실제 링크: <a href="${actualUrl}" target="_blank" style="color: #28a745;">${actualUrl}</a></small>
-                `;
-                
+                shortUrl.textContent = fullShortUrl;
                 result.classList.add('show');
 
                 // 스크롤 효과
@@ -360,13 +350,11 @@
             }
 
             async copyToClipboard() {
-                // 실제 작동하는 링크를 복사하도록 수정
-                const shortCode = Object.keys(this.urls).slice(-1)[0]; // 마지막 생성된 코드
-                const actualUrl = `${this.realBaseUrl}?s=${shortCode}`;
+                const shortUrl = document.getElementById('shortUrl').textContent;
                 const copyBtn = document.getElementById('copyBtn');
                 
                 try {
-                    await navigator.clipboard.writeText(actualUrl);
+                    await navigator.clipboard.writeText(shortUrl);
                     copyBtn.textContent = '복사됨!';
                     copyBtn.classList.add('copied');
                     
@@ -377,7 +365,7 @@
                 } catch (err) {
                     // 클립보드 API가 지원되지 않는 경우
                     const textArea = document.createElement('textarea');
-                    textArea.value = actualUrl;
+                    textArea.value = shortUrl;
                     document.body.appendChild(textArea);
                     textArea.select();
                     document.execCommand('copy');
@@ -406,8 +394,9 @@
                         <div class="clicks">${data.clicks} 클릭</div>
                         <div class="original">${this.truncateUrl(data.original, 50)}</div>
                         <div class="short">
-                            표시: <span style="color: #667eea;">${this.baseUrl}/${shortCode}</span><br>
-                            <small>실제: <a href="?s=${shortCode}" target="_blank" style="color: #28a745; text-decoration: none;">${this.realBaseUrl}?s=${shortCode}</a></small>
+                            <a href="/${shortCode}" target="_blank" style="text-decoration: none; color: inherit;">
+                                ${this.baseUrl}/${shortCode}
+                            </a>
                         </div>
                     </div>
                 `).join('');
@@ -419,7 +408,8 @@
 
             handleRedirect() {
                 const urlParams = new URLSearchParams(window.location.search);
-                const shortCode = urlParams.get('s');
+                const pathCode = window.location.pathname.slice(1); // '/' 제거
+                const shortCode = urlParams.get('s') || pathCode;
                 
                 if (shortCode && this.urls[shortCode]) {
                     // 클릭 수 증가
@@ -431,13 +421,13 @@
                     return;
                 }
                 
-                if (shortCode) {
+                if (shortCode && shortCode !== 'index.html') {
                     // 존재하지 않는 단축 URL
                     document.body.innerHTML = `
                         <div style="text-align: center; margin-top: 100px; font-family: sans-serif;">
                             <h1 style="color: #dc3545;">404 - 페이지를 찾을 수 없습니다</h1>
                             <p style="margin: 20px 0;">요청하신 단축 URL이 존재하지 않거나 만료되었습니다.</p>
-                            <a href="${this.realBaseUrl}" style="color: #667eea; text-decoration: none; font-weight: bold;">홈페이지로 돌아가기</a>
+                            <a href="${window.location.origin}" style="color: #667eea; text-decoration: none; font-weight: bold;">홈페이지로 돌아가기</a>
                         </div>
                     `;
                 }
