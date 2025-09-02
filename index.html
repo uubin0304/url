@@ -290,19 +290,25 @@
                 const shortenBtn = document.getElementById('shortenBtn');
                 const originalUrl = urlInput.value.trim();
 
+                console.log('입력된 URL:', originalUrl);
+
                 // 에러 메시지 초기화
                 errorMsg.textContent = '';
 
                 // URL 유효성 검사
                 if (!originalUrl) {
                     errorMsg.textContent = 'URL을 입력해주세요.';
+                    console.log('Error: URL 없음');
                     return;
                 }
 
                 if (!this.isValidUrl(originalUrl)) {
                     errorMsg.textContent = '올바른 URL 형식이 아닙니다. (예: https://example.com)';
+                    console.log('Error: 잘못된 URL 형식');
                     return;
                 }
+
+                console.log('URL 유효성 검사 통과');
 
                 // 버튼 비활성화
                 shortenBtn.disabled = true;
@@ -314,6 +320,8 @@
                     shortCode = this.generateShortCode();
                 } while (this.urls[shortCode]);
 
+                console.log('생성된 단축 코드:', shortCode);
+
                 // URL 정보 저장
                 const urlData = {
                     original: originalUrl,
@@ -324,6 +332,9 @@
 
                 this.urls[shortCode] = urlData;
                 this.saveToStorage();
+
+                console.log('저장된 URL 데이터:', urlData);
+                console.log('전체 저장된 URLs:', this.urls);
 
                 // 결과 표시
                 this.showResult(shortCode);
@@ -407,50 +418,85 @@
             }
 
             handleRedirect() {
-                const urlParams = new URLSearchParams(window.location.search);
-                const pathCode = window.location.pathname.slice(1); // '/' 제거
-                const shortCode = urlParams.get('s') || pathCode;
+                // URL에서 경로 추출
+                const path = window.location.pathname;
+                const shortCode = path.substring(1); // 첫 번째 '/' 제거
                 
-                console.log('Current path:', window.location.pathname);
-                console.log('Short code:', shortCode);
-                console.log('Available codes:', Object.keys(this.urls));
+                console.log('Full URL:', window.location.href);
+                console.log('Path:', path);
+                console.log('Extracted short code:', shortCode);
+                console.log('All stored URLs:', this.urls);
                 
-                // 홈페이지인 경우 리다이렉트 처리 안함
+                // 홈페이지인 경우 (빈 경로이거나 index.html)
                 if (!shortCode || shortCode === '' || shortCode === 'index.html') {
+                    console.log('홈페이지 접속 - 리다이렉트 처리 안함');
                     return;
                 }
                 
+                // localStorage에서 데이터 다시 로드 (혹시 모를 동기화 문제 해결)
+                this.urls = this.loadFromStorage();
+                console.log('Reloaded URLs from storage:', this.urls);
+                
+                // 단축 코드가 존재하는지 확인
                 if (this.urls[shortCode]) {
+                    console.log('찾은 URL 데이터:', this.urls[shortCode]);
+                    
                     // 클릭 수 증가
                     this.urls[shortCode].clicks++;
                     this.saveToStorage();
                     
-                    console.log('Redirecting to:', this.urls[shortCode].original);
+                    const targetUrl = this.urls[shortCode].original;
+                    console.log('리다이렉트 대상:', targetUrl);
                     
-                    // 원본 URL로 리다이렉트
-                    window.location.href = this.urls[shortCode].original;
+                    // 리다이렉트 전 사용자에게 알림
+                    document.body.innerHTML = `
+                        <div style="text-align: center; margin-top: 100px; font-family: sans-serif;">
+                            <h2 style="color: #28a745;">🚀 리다이렉트 중...</h2>
+                            <p style="margin: 20px 0;">잠시만 기다려주세요.</p>
+                            <p style="color: #666; font-size: 14px;">대상: ${targetUrl}</p>
+                        </div>
+                    `;
+                    
+                    // 1초 후 리다이렉트 (사용자가 볼 수 있도록)
+                    setTimeout(() => {
+                        window.location.href = targetUrl;
+                    }, 1000);
+                    
                     return;
                 } else {
+                    console.log('단축 코드를 찾을 수 없음:', shortCode);
                     // 존재하지 않는 단축 URL
                     document.body.innerHTML = `
                         <div style="text-align: center; margin-top: 100px; font-family: sans-serif;">
                             <h1 style="color: #dc3545;">404 - 페이지를 찾을 수 없습니다</h1>
                             <p style="margin: 20px 0;">요청하신 단축 URL "${shortCode}"이 존재하지 않거나 만료되었습니다.</p>
+                            <p style="color: #999; font-size: 14px;">
+                                저장된 코드들: ${Object.keys(this.urls).join(', ') || '없음'}
+                            </p>
                             <p style="color: #999; font-size: 14px;">먼저 홈페이지에서 단축 URL을 생성해주세요.</p>
-                            <a href="${window.location.origin}" style="color: #667eea; text-decoration: none; font-weight: bold;">홈페이지로 돌아가기</a>
+                            <a href="${window.location.origin}" style="color: #667eea; text-decoration: none; font-weight: bold; font-size: 18px; padding: 10px 20px; border: 2px solid #667eea; border-radius: 5px; display: inline-block; margin-top: 20px;">홈페이지로 돌아가기</a>
                         </div>
                     `;
                 }
             }
 
             saveToStorage() {
-                localStorage.setItem('shortUrls', JSON.stringify(this.urls));
+                try {
+                    localStorage.setItem('shortUrls', JSON.stringify(this.urls));
+                    console.log('데이터 저장됨:', this.urls);
+                } catch (e) {
+                    console.error('저장 실패:', e);
+                }
             }
 
             loadFromStorage() {
                 try {
-                    return JSON.parse(localStorage.getItem('shortUrls')) || {};
+                    const stored = localStorage.getItem('shortUrls');
+                    const data = stored ? JSON.parse(stored) : {};
+                    console.log('데이터 로드됨:', data);
+                    return data;
                 } catch (e) {
+                    console.error('로드 실패:', e);
                     return {};
                 }
             }
