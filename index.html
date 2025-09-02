@@ -341,9 +341,18 @@
             showResult(shortCode) {
                 const result = document.getElementById('result');
                 const shortUrl = document.getElementById('shortUrl');
-                const fullShortUrl = `${this.baseUrl}/${shortCode}`;  // 슬래시 형태로 변경
                 
-                shortUrl.textContent = fullShortUrl;
+                // 표시용과 실제 링크용을 분리
+                const displayUrl = `${this.baseUrl}/${shortCode}`;
+                const actualUrl = `${this.realBaseUrl}?s=${shortCode}`;
+                
+                // 표시는 커스텀 도메인으로, 실제 링크는 작동하는 주소로
+                shortUrl.innerHTML = `
+                    <span style="color: #667eea;">${displayUrl}</span>
+                    <br>
+                    <small style="color: #999; font-size: 12px;">실제 링크: <a href="${actualUrl}" target="_blank" style="color: #28a745;">${actualUrl}</a></small>
+                `;
+                
                 result.classList.add('show');
 
                 // 스크롤 효과
@@ -351,11 +360,13 @@
             }
 
             async copyToClipboard() {
-                const shortUrl = document.getElementById('shortUrl').textContent;
+                // 실제 작동하는 링크를 복사하도록 수정
+                const shortCode = Object.keys(this.urls).slice(-1)[0]; // 마지막 생성된 코드
+                const actualUrl = `${this.realBaseUrl}?s=${shortCode}`;
                 const copyBtn = document.getElementById('copyBtn');
                 
                 try {
-                    await navigator.clipboard.writeText(shortUrl);
+                    await navigator.clipboard.writeText(actualUrl);
                     copyBtn.textContent = '복사됨!';
                     copyBtn.classList.add('copied');
                     
@@ -366,7 +377,7 @@
                 } catch (err) {
                     // 클립보드 API가 지원되지 않는 경우
                     const textArea = document.createElement('textarea');
-                    textArea.value = shortUrl;
+                    textArea.value = actualUrl;
                     document.body.appendChild(textArea);
                     textArea.select();
                     document.execCommand('copy');
@@ -395,9 +406,8 @@
                         <div class="clicks">${data.clicks} 클릭</div>
                         <div class="original">${this.truncateUrl(data.original, 50)}</div>
                         <div class="short">
-                            <a href="?s=${shortCode}" target="_blank" style="text-decoration: none; color: inherit;">
-                                ${this.baseUrl}/${shortCode}
-                            </a>
+                            표시: <span style="color: #667eea;">${this.baseUrl}/${shortCode}</span><br>
+                            <small>실제: <a href="?s=${shortCode}" target="_blank" style="color: #28a745; text-decoration: none;">${this.realBaseUrl}?s=${shortCode}</a></small>
                         </div>
                     </div>
                 `).join('');
