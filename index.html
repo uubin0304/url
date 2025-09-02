@@ -411,22 +411,32 @@
                 const pathCode = window.location.pathname.slice(1); // '/' 제거
                 const shortCode = urlParams.get('s') || pathCode;
                 
-                if (shortCode && this.urls[shortCode]) {
+                console.log('Current path:', window.location.pathname);
+                console.log('Short code:', shortCode);
+                console.log('Available codes:', Object.keys(this.urls));
+                
+                // 홈페이지인 경우 리다이렉트 처리 안함
+                if (!shortCode || shortCode === '' || shortCode === 'index.html') {
+                    return;
+                }
+                
+                if (this.urls[shortCode]) {
                     // 클릭 수 증가
                     this.urls[shortCode].clicks++;
                     this.saveToStorage();
                     
+                    console.log('Redirecting to:', this.urls[shortCode].original);
+                    
                     // 원본 URL로 리다이렉트
                     window.location.href = this.urls[shortCode].original;
                     return;
-                }
-                
-                if (shortCode && shortCode !== 'index.html') {
+                } else {
                     // 존재하지 않는 단축 URL
                     document.body.innerHTML = `
                         <div style="text-align: center; margin-top: 100px; font-family: sans-serif;">
                             <h1 style="color: #dc3545;">404 - 페이지를 찾을 수 없습니다</h1>
-                            <p style="margin: 20px 0;">요청하신 단축 URL이 존재하지 않거나 만료되었습니다.</p>
+                            <p style="margin: 20px 0;">요청하신 단축 URL "${shortCode}"이 존재하지 않거나 만료되었습니다.</p>
+                            <p style="color: #999; font-size: 14px;">먼저 홈페이지에서 단축 URL을 생성해주세요.</p>
                             <a href="${window.location.origin}" style="color: #667eea; text-decoration: none; font-weight: bold;">홈페이지로 돌아가기</a>
                         </div>
                     `;
