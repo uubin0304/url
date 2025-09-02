@@ -1,0 +1,3 @@
+# Netlify 리다이렉트 설정
+# 모든 경로를 index.html로 라우팅 (SPA 방식)
+/*    /index.html   200
